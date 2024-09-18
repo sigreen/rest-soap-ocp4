@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:camel-cxf="http://camel.apache.org/schema/cxf"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                        http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
+                        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+    <camel-cxf:cxfEndpoint
+        address="http://www.dneonline.com/calculator.asmx"
+        id="calculatorClient" serviceClass="org.tempuri.CalculatorSoap">
+        <camel-cxf:properties>
+            <entry key="dataFormat" value="MESSAGE" />
+        </camel-cxf:properties>
+    </camel-cxf:cxfEndpoint>
+    <camelContext id="camel" xmlns="http://camel.apache.org/schema/spring">
+        <restConfiguration component="undertow"
+            host="{{server.address}}" port="8080"
+            contextPath="/camel" apiContextPath="/api-doc">
+            <dataFormatProperty key="prettyPrint" value="true" />
+            <apiProperty key="api.version" value="1.0.0" />
+            <apiProperty key="api.title" value="SOAP to REST Proxy" />
+            <apiProperty key="api.description"
+                value="Camel Rest Example with Swagger that provides a SOAP to REST proxy service" />
+            <apiProperty key="api.contact.name" value="Simon Green" />
+        </restConfiguration>
+
+        <rest path="/calculator">
+            <get uri="/{intA}/{intB}" produces="application/json" consumes="application/json">
+                <description>Add two numbers</description>
+                <param dataType="string"
+                    description="The first number"
+                    name="intA" type="path" />
+                <param dataType="string"
+                    description="The second number"
+                    name="intB" type="path" />
+                <to uri="direct:addTwoNumbers" />
+            </get>
+        </rest>
+
+        <route id="addTwoNumbers" streamCache="true">
+            <from id="_from1" uri="direct:addTwoNumbers" />
+            <removeHeaders id="_removeHeaders1" pattern="org.restlet.http.headers" />
+            <setBody id="_setBody1">
+                <simple>
+            <![CDATA[
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+            <soapenv:Header/>
+            <soapenv:Body>
+                <tem:Add>
+                    <tem:intA>]]>${header.intA}<![CDATA[</tem:intA>
+                    <tem:intB>]]>${header.intB}<![CDATA[</tem:intB>
+                </tem:Add>
+            </soapenv:Body>
+            </soapenv:Envelope>
+            ]]>
+            </simple>
+            </setBody>
+            <to id="_to1" uri="cxf:bean:calculatorClient" />
+            <setHeader headerName="result">
+                <xpath>//*[local-name()='AddResult']/text()</xpath>
+            </setHeader>
+            <setBody>
+                <simple>{"AddResponse": {"AddResult": ${header.result}}}</simple>
+            </setBody>
+            <removeHeaders id="_removeHeaders2" pattern="*" />
+        </route>
+    </camelContext>
+</beans>

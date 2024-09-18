@@ -75,7 +75,7 @@ mvn clean -DskipTests oc:deploy -Popenshift
 4. Using the above hostname, test the service with the following command:
 
 ```bash
-curl http://<ocp route>/camel/api-doc
+curl curl http://$(oc get route rest -n rest-soap -o jsonpath='{.spec.host}')/camel/api-doc
 ```
 
 7.  You can import the above URL into Insomnia and test the endpoint using the OpenAPI spec.
@@ -83,7 +83,7 @@ curl http://<ocp route>/camel/api-doc
 You can test the transformation using any number you like in the URL:
 
 ```bash
-curl -X GET "http://<ocp route>/camel/calculator/2/201" -H "accept: application/json" | jq
+curl -X GET "http://$(oc get route rest -n rest-soap -o jsonpath='{.spec.host}')/camel/calculator/2/201" -H "accept: application/json" | jq
 ```
 
 8.  If the request is successful, you should receive the following response:
